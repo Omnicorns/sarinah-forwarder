@@ -25,7 +25,7 @@
     </appender>
 
     <!-- 3) Logger khusus ApiLoggingFilter -->
-    <logger name="com.sarinah.sales.configuration.ApiLoggingFilter"
+    <logger name="com.sarinah.sales.configuration.LoggingFilterConfig"
             level="INFO" additivity="false">
         <!-- Hanya kirim ke API_FILE, tidak ke console lewat additivity -->
         <appender-ref ref="API_FILE"/>
