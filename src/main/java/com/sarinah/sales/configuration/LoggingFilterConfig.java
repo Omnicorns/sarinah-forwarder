@@ -1,5 +1,7 @@
 package com.sarinah.sales.configuration;
 
+ // ganti sesuai package projectmu
+
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -30,7 +32,7 @@ public class LoggingFilterConfig {
         FilterRegistrationBean<ApiLoggingFilter> reg = new FilterRegistrationBean<>();
         reg.setFilter(new ApiLoggingFilter());
         reg.setName("apiLoggingFilter");
-        reg.setOrder(Ordered.HIGHEST_PRECEDENCE); // log paling awal agar tetap eksekusi walau 401
+        reg.setOrder(Ordered.HIGHEST_PRECEDENCE); // log duluan, walau 401 tetap jalan
         reg.addUrlPatterns("/*");
         reg.setDispatcherTypes(EnumSet.of(DispatcherType.REQUEST, DispatcherType.ERROR, DispatcherType.ASYNC));
         return reg;
@@ -38,35 +40,36 @@ public class LoggingFilterConfig {
 
     static class ApiLoggingFilter extends OncePerRequestFilter {
         private static final Logger log = LoggerFactory.getLogger(ApiLoggingFilter.class);
-        private static final ObjectMapper om = new ObjectMapper();
-        private static final int MAX = 4096; // 4KB
+        private static final ObjectMapper OM = new ObjectMapper();
+        private static final int MAX = 4096; // batas panjang body yang ditampilkan
 
         @Override protected boolean shouldNotFilterErrorDispatch() { return false; }
         @Override protected boolean shouldNotFilterAsyncDispatch() { return false; }
 
         @Override
-        protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
-                throws ServletException, IOException {
+        protected void doFilterInternal(HttpServletRequest request,
+                                        HttpServletResponse response,
+                                        FilterChain chain) throws ServletException, IOException {
 
             ContentCachingRequestWrapper req  = new ContentCachingRequestWrapper(request);
             ContentCachingResponseWrapper res = new ContentCachingResponseWrapper(response);
 
             String traceId = headerOrNew(req, "X-Request-ID");
-            MDC.put("traceId", traceId); // supaya bisa tampil kalau pattern logback pakai %X{traceId}
+            MDC.put("traceId", traceId);
 
             long start = System.currentTimeMillis();
             try {
                 chain.doFilter(req, res);
             } finally {
                 long dur = System.currentTimeMillis() - start;
+                String method = req.getMethod();
+                String uri    = req.getRequestURI();
+                int status    = res.getStatus();
 
-                String method  = req.getMethod();
-                String uri     = req.getRequestURI();
-                int status     = res.getStatus();
-                String reqBody = sanitize(new String(req.getContentAsByteArray(), StandardCharsets.UTF_8));
-                String resBody = sanitize(new String(res.getContentAsByteArray(), StandardCharsets.UTF_8));
+                String reqBody = sanitize(bytesToString(req.getContentAsByteArray()));
+                String resBody = sanitize(bytesToString(res.getContentAsByteArray()));
 
-                // === 3 baris, tanpa newline ===
+                // 3 baris log: summary, reqBody, resBody
                 log.info("API {} {} \u2192 status={} ({} ms) traceId={}", method, uri, status, dur, traceId);
                 if (!reqBody.isBlank()) log.info("reqBody: {}", reqBody);
                 if (!resBody.isBlank()) log.info("resBody: {}", resBody);
@@ -81,11 +84,15 @@ public class LoggingFilterConfig {
             return (v == null || v.isBlank()) ? UUID.randomUUID().toString() : v;
         }
 
+        private static String bytesToString(byte[] arr) {
+            return (arr == null || arr.length == 0) ? "" : new String(arr, StandardCharsets.UTF_8);
+        }
+
         private static String sanitize(String raw) {
             if (raw == null || raw.isBlank()) return "";
             String s = raw;
-            // compact jika JSON valid
-            try { s = om.writeValueAsString(om.readTree(raw)); } catch (Exception ignore) {}
+            // compact JSON jika valid
+            try { s = OM.writeValueAsString(OM.readTree(raw)); } catch (Exception ignored) {}
             // rapihkan whitespace
             s = s.replaceAll("[\\r\\n\\t]+", " ").replaceAll(" +", " ").trim();
             // batasi panjang
