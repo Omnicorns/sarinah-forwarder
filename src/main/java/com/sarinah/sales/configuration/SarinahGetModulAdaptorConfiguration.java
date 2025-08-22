@@ -22,10 +22,20 @@ import org.apache.hc.core5.util.Timeout;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpRequest;
+import org.springframework.http.client.ClientHttpRequestExecution;
+import org.springframework.http.client.ClientHttpRequestInterceptor;
+import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
+import org.springframework.util.StreamUtils;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 
 import javax.net.ssl.SSLContext;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 
@@ -48,6 +58,58 @@ public class SarinahGetModulAdaptorConfiguration {
 
     @Value("${http.client.read-timeout}")
     private int readTimeout;
+
+
+    static class AntivirusRetryInterceptor implements ClientHttpRequestInterceptor {
+        private final int maxExtraAttempts;   // 1 = coba ulang sekali
+        private final long backoffMillis;     // jeda antar percobaan
+
+        AntivirusRetryInterceptor(int maxExtraAttempts, long backoffMillis) {
+            this.maxExtraAttempts = maxExtraAttempts;
+            this.backoffMillis = backoffMillis;
+        }
+
+        @Override
+        public ClientHttpResponse intercept(
+                HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
+
+            final int total = 1 + maxExtraAttempts;
+
+            for (int attempt = 1; attempt <= total; attempt++) {
+                ClientHttpResponse resp = execution.execute(request, body);
+
+                if (!isBlockedByAV(resp)) {
+                    return resp; // OK, bukan halaman blokir → langsung return
+                }
+
+                // kalau diblok & masih ada jatah retry → tutup & ulangi
+                if (attempt < total) {
+                    try {
+                        resp.close();
+                    } catch (Exception ignored) {
+                    }
+                    try {
+                        Thread.sleep(backoffMillis * attempt);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                    }
+                    continue; // retry
+                }
+
+                // Percobaan terakhir tetap dikembalikan apa adanya (tanpa throw)
+                return resp;
+            }
+            // unreachable
+            return execution.execute(request, body);
+        }
+
+        private boolean isBlockedByAV(ClientHttpResponse response) throws IOException {
+            int code = response.getStatusCode().value();
+            return code == 500;
+        }
+
+    }
+
 
     private HttpComponentsClientHttpRequestFactory getRequestFactory(MeterRegistry meterRegistry) throws Exception {
         // ✱: SSLContext “trust-all”
@@ -100,11 +162,11 @@ public class SarinahGetModulAdaptorConfiguration {
             RestClient.Builder builder,
             MeterRegistry meterRegistry
     ) throws NoSuchAlgorithmException, KeyManagementException, Exception {
-        // panggil helper getRequestFactory di sini
+
         HttpComponentsClientHttpRequestFactory factory = getRequestFactory(meterRegistry);
         return builder
-
                 .requestFactory(factory)
+                .requestInterceptor(new AntivirusRetryInterceptor(1,300))
                 .build();
     }
 
