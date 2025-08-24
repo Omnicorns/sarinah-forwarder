@@ -24,6 +24,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpRequest;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.ClientHttpResponse;
@@ -166,6 +167,7 @@ public class SarinahGetModulAdaptorConfiguration {
         HttpComponentsClientHttpRequestFactory factory = getRequestFactory(meterRegistry);
         return builder
                 .requestFactory(factory)
+                .defaultStatusHandler(HttpStatusCode::isError, (request, response) -> { /* no-op */ })
                 .requestInterceptor(new AntivirusRetryInterceptor(1,300))
                 .build();
     }
