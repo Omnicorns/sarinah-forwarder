@@ -40,6 +40,13 @@
 		</dependency>
 
 		<dependency>
+			<groupId>org.conscrypt</groupId>
+			<artifactId>conscrypt-openjdk-uber</artifactId>
+			<version>2.5.2</version>
+		</dependency>
+
+
+		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>

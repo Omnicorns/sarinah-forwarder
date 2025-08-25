@@ -24,6 +24,10 @@ public class SarinahGetModulServiceAdaptor {
 
     @Value("${sarinah-portal.journal-entries-coa-harmonisasi.url}")
     private String journalEntriesUrl;
+
+    @Value("${sarinah-portal.barcode.url}")
+    private String scanBarcodeUrl;
+
     private final CommonUtils commonUtils;
     private final RestClient defaultPointRestClient;
 
@@ -103,5 +107,33 @@ public class SarinahGetModulServiceAdaptor {
         arr.add(root);
         return arr;
     }
+
+    public ArrayNode getScanBarcode(ObjectNode request) {
+        JsonNode root = defaultPointRestClient
+                .post()
+                .uri(commonUtils.dynamicParamBuilder(request, scanBarcodeUrl))
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .body(JsonNode.class);;                 // baca sebagai JsonNode
+
+
+        if (root == null) {
+            return JsonNodeFactory.instance.arrayNode();
+        }
+
+
+        if (root.isArray()) {
+            return (ArrayNode) root;
+        }
+
+
+        ArrayNode arr = JsonNodeFactory.instance.arrayNode();
+        arr.add(root);
+        return arr;
+    }
+
+
+
 
 }
