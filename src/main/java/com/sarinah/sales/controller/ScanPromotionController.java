@@ -17,7 +17,7 @@ public class ScanPromotionController {
     private final PostScanBarcodeService postScanBarcodeService;
 
     @PostMapping(value = "/barcode")
-    public ArrayNode postLoyaltyMemberResponse(@RequestBody ObjectNode request) {
+    public ObjectNode postScanResponse(@RequestBody ObjectNode request) {
         return postScanBarcodeService.execute(request);
     }
 }

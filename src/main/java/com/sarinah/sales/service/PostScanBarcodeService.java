@@ -12,7 +12,7 @@ public class PostScanBarcodeService {
     private final SarinahGetModulServiceAdaptor sarinahGetModulServiceAdaptor;
 
 
-    public ArrayNode execute(ObjectNode request) {
+    public ObjectNode execute(ObjectNode request) {
         return sarinahGetModulServiceAdaptor.getScanBarcode(request);
 
     }
