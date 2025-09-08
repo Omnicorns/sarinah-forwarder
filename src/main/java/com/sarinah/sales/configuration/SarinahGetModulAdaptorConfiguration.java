@@ -204,7 +204,7 @@ public class SarinahGetModulAdaptorConfiguration {
             @Override
             public boolean retryRequest(HttpResponse response, int execCount, org.apache.hc.core5.http.protocol.HttpContext context) {
                 int code = response.getCode();
-                if (execCount <= 2 && (code == 499 || code == 403 || code == 451 || code == 502)) {
+                if (execCount <= 2 && (code == 499 || code == 403 || code == 451 || code == 502 || code == 500)) {
                     return true;
                 }
                 return super.retryRequest(response, execCount, context);
