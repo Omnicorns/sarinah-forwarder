@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sarinah.sales.service.PostJournalEntriesService;
 import com.sarinah.sales.service.PostLoyaltyMemberService;
+import com.sarinah.sales.service.PostOrderRatingService;
 import com.sarinah.sales.service.PostPosHistoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,6 +20,7 @@ public class ModuleController {
     private final PostLoyaltyMemberService postLoyaltyMemberService;
     private final PostPosHistoryService postPosHistoryService;
     private final PostJournalEntriesService postJournalEntriesService;
+    private final PostOrderRatingService postOrderRatingService;
 
     @PostMapping(value = "/member-loyalty")
     public ArrayNode postLoyaltyMemberResponse(@RequestBody ObjectNode request) {
@@ -34,6 +36,14 @@ public class ModuleController {
     public ArrayNode postJournalEntriesResponse(@RequestBody ObjectNode request) {
         return postJournalEntriesService.execute(request);
     }
+
+
+    @PostMapping(value = "/rating")
+    public ArrayNode postOrderRatingResponse(@RequestBody ObjectNode request) {
+        return postOrderRatingService.execute(request);
+    }
+
+
 
 
 }
